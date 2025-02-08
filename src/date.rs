@@ -1,21 +1,20 @@
 use crate::types;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Date {
     day: u32,
     month: u32,
     year: u32,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Time {
     hour: u32,
     minute: u32,
     second: u32,
 }
-#[derive(Debug, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct DateTime {
     date: Date,
     time: Time,
@@ -100,6 +99,11 @@ impl From<String> for DateTime {
                 }
             }
         }
+    }
+}
+impl From<&str> for DateTime{
+    fn from(value: &str) -> Self {
+        DateTime::from_str(value).unwrap()
     }
 }
 impl From<&String> for DateTime {

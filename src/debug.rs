@@ -1,5 +1,5 @@
 use crate::types::{NemoFile, NemoPoint};
-
+#[allow(dead_code)]
 pub fn test_mnemo_data() -> &'static str {
     const DATA: &str = "
 Section Name,TypeShot,Length(m),Depth IN(m),Depth OUT(m),Heading IN(dd),Heading OUT(dd),Pitch IN(dd),Pitch OUT(dd),Left(m),Right(m),Up(m),Down(m),Temperature(°C),Time,Marker
@@ -12,7 +12,9 @@ B30,STD,8.60,4.69,5.79,41.2,44.8,-3.5,-1.1,0.0,0.0,0.0,0.0,23.2,00/01/11 - 04:10
 ";
     DATA
 }
-pub fn debug_nemopoint(nm: NemoPoint) {
+
+#[allow(dead_code)]
+pub fn debug_nemopoint(nm: &NemoPoint) {
     println!("Name: {} ", nm.name);
     println!("TypeShot: {:?} ", nm.typeshot);
     println!("Length: {} ", nm.length);
@@ -24,10 +26,11 @@ pub fn debug_nemopoint(nm: NemoPoint) {
     println!("Time: {}", nm.time);
     println!("Parsed time: {:?}", nm.parsed_time);
 }
-
+#[allow(dead_code)]
 pub fn debug_nemofile(nmf: NemoFile) {
+    let nmf = nmf.to_owned();
     println!("File: {}", nmf.filename);
-    for p in nmf.points {
+    for p in &nmf.points {
         debug_nemopoint(p);
     }
 }

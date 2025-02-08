@@ -1,11 +1,12 @@
 use crate::date::DateTime;
-use serde::Deserialize;
-use std::{path::PathBuf, str::FromStr};
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+mod nemopoint;
+mod nemofile;
 
 const HEADER: &str = "Section Name,TypeShot,Length(m),Depth IN(m),Depth OUT(m),Heading IN(dd),Heading OUT(dd),Pitch IN(dd),Pitch OUT(dd),Left(m),Right(m),Up(m),Down(m),Temperature(°C),Time,Marker";
-#[derive(Default, Debug, Deserialize)]
+#[derive(Default, Debug, Deserialize, Serialize, Clone)]
 #[allow(dead_code)]
-
 pub struct Dimensions {
     #[serde(rename = "Left(m)")]
     pub left: f32,
@@ -19,23 +20,23 @@ pub struct Dimensions {
 pub trait Print {
     fn print(&self);
 }
-#[derive(Default, Debug, Deserialize)]
+#[derive(Default, Debug, Deserialize, Serialize, Clone)]
 /// Depth in meters, 0 = in, 1 = out
 pub struct Depth {
     #[serde(rename = "Depth IN(m)")]
-    _in: f32,
+    pub _in: f32,
     #[serde(rename = "Depth OUT(m)")]
-    _out: f32,
+    pub _out: f32,
 }
-#[derive(Default, Debug, Deserialize)]
+#[derive(Default, Debug, Deserialize, Serialize, Clone)]
 /// Heading in degrees, 0 = in, 1 = out
 pub struct Heading {
     #[serde(rename = "Heading IN(dd)")]
-    _in: f32,
+    pub _in: f32,
     #[serde(rename = "Heading OUT(dd)")]
-    _out: f32,
+    pub _out: f32,
 }
-#[derive(Default, Debug, Deserialize)]
+#[derive(Default, Debug, Deserialize, Serialize, Clone)]
 /// Pitch in degrees
 pub struct Pitch {
     #[serde(rename = "Pitch IN(dd)")]
@@ -43,9 +44,8 @@ pub struct Pitch {
     #[serde(rename = "Pitch OUT(dd)")]
     _out: f32,
 }
-#[derive(Default, Debug, Deserialize)]
+#[derive(Default, Debug, Deserialize, Serialize, Clone)]
 #[allow(dead_code)]
-
 pub struct NemoPoint {
     #[serde(rename = "Section Name")]
     pub name: String,
@@ -69,14 +69,14 @@ pub struct NemoPoint {
     marker: Option<String>,
     pub parsed_time: Option<DateTime>,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct NemoFile {
-    header: &'static str,
+    pub(super) header: &'static str,
     pub filename: String,
     pub points: Vec<NemoPoint>,
 }
-#[derive(Default, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
 pub enum NemoTypeShot {
     STD,
     EOC,
@@ -84,30 +84,6 @@ pub enum NemoTypeShot {
     UND,
 }
 
-impl NemoPoint {
-    pub fn new(name: String, t: &str) -> Self {
-        Self {
-            name,
-            typeshot: t.parse().unwrap(),
-            ..Default::default()
-        }
-    }
-    pub fn set_dimensions(&mut self, d: Dimensions) {
-        // set dimensions
-        self.dimensions = d;
-    }
-    pub fn set_depth(&mut self, d: Depth) {
-        // set depth
-        self.depth = d;
-    }
-    pub fn set_heading(&mut self, h: Heading) {
-        // set heading
-        self.heading = h;
-    }
-    pub fn get_datetime(self) -> DateTime {
-        DateTime::from(self.time)
-    }
-}
 impl FromStr for NemoTypeShot {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -118,27 +94,4 @@ impl FromStr for NemoTypeShot {
         }
     }
 }
-impl NemoFile {
-    pub fn add_point(&mut self, point: NemoPoint) {
-        self.points.push(point);
-    }
-    pub fn from_vec(&mut self, vec: Vec<NemoPoint>) {
-        self.points = vec;
-    }
-    pub fn as_ref(&self) -> &Self {
-        self
-    }
-    pub fn set_filename(&mut self, name: PathBuf){
-        let name = name.file_name().unwrap().to_str().unwrap().strip_suffix(".csv").unwrap().to_string();
-        self.filename = name;
-    } 
-}
-impl Default for NemoFile {
-    fn default() -> Self {
-        Self {
-            header: HEADER,
-            filename: "".to_string(),
-            points: vec![],
-        }
-    }
-}
+
