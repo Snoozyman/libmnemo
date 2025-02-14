@@ -1,6 +1,8 @@
 use crate::date::DateTime;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+pub use self::nemofile::NemoFile;
+pub use self::nemopoint::NemoPoint;
 mod nemopoint;
 mod nemofile;
 
@@ -44,38 +46,8 @@ pub struct Pitch {
     #[serde(rename = "Pitch OUT(dd)")]
     _out: f32,
 }
-#[derive(Default, Debug, Deserialize, Serialize, Clone)]
-#[allow(dead_code)]
-pub struct NemoPoint {
-    #[serde(rename = "Section Name")]
-    pub name: String,
-    #[serde(rename = "TypeShot")]
-    pub typeshot: NemoTypeShot,
-    #[serde(rename = "Length(m)")]
-    pub length: f32,
-    #[serde(flatten)]
-    pub depth: Depth,
-    #[serde(flatten)]
-    pub heading: Heading,
-    #[serde(flatten)]
-    pub pitch: Pitch,
-    #[serde(flatten)]
-    pub dimensions: Dimensions,
-    #[serde(rename = "Temperature(°C)")]
-    pub temperature: f32,
-    #[serde(rename = "Time")]
-    pub time: String,
-    #[serde(rename = "Marker")]
-    marker: Option<String>,
-    pub parsed_time: Option<DateTime>,
-}
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct NemoFile {
-    pub(super) header: &'static str,
-    pub filename: String,
-    pub points: Vec<NemoPoint>,
-}
+
+
 #[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
 pub enum NemoTypeShot {
     STD,

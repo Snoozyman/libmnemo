@@ -1,6 +1,14 @@
-use super::{NemoPoint,NemoFile,HEADER};
+use super::{NemoPoint,HEADER};
 use std::path::Path;
 
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct NemoFile {
+    pub header: &'static str,
+    pub filename: String,
+    pub path: String,
+    pub points: Vec<NemoPoint>,
+}
 impl NemoFile {
     pub fn add_point(&mut self, point: NemoPoint) {
         self.points.push(point);
@@ -26,6 +34,7 @@ impl Default for NemoFile {
             header: HEADER,
             filename: "".to_string(),
             points: vec![],
+            path: "".to_string()
         }
     }
 }

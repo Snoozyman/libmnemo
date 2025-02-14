@@ -9,6 +9,5 @@ serde = { version = "1.0.217", features = ["derive"] }
 
 
 [features]
-
 debug = []
-survex = []
+web = []

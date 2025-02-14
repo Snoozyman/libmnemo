@@ -7,115 +7,143 @@ pub mod debug;
 #[cfg(not(feature = "debug"))]
 mod debug;
 
+#[cfg(feature="web")]
+pub use self::process_nemo_data;
+
 use date::DateTime;
 use error::NemoError;
 use std::{
-    fmt::Display, fs, ops::{Deref, DerefMut}, path::PathBuf, rc::Rc
+    fmt::Display, fs, path::{Path, PathBuf}, rc::Rc
 };
 use types::{NemoFile, NemoPoint};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct NemoReaderOptions {
-    filter: &'static str,
+    filter: String,
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct NemoReader {
-    options: NemoReaderOptions,
+    pub options: NemoReaderOptions,
     pub files: Vec<Rc<NemoFile>>,
-    paths: Vec<PathBuf>,
 }
 impl Default for NemoReaderOptions {
     fn default() -> Self {
-        Self { filter: "MNEMO" }
+        Self { filter: "MNEMO".into() }
+    }
+}
+impl NemoReaderOptions {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
 impl NemoReader {
-    pub fn new(path: &str, options: NemoReaderOptions) -> Result<Self, NemoError> {
-        let path_buf = PathBuf::from(path);
-        let mut vec_paths: Vec<PathBuf> = vec![];
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn load<T: ToString>(&self, path: T) -> Result<Self, NemoError> {
+        let options = self.options.clone();
+        let path_buf = PathBuf::from(path.to_string());
         let mut vec_files: Vec<Rc<NemoFile>> = vec![];
-        vec_paths.push(path_buf.clone());
-        if path_buf.is_file() {
-            let file = Rc::new(process_nemo_data(&path_buf).unwrap());
-            vec_files.push(file);
-        } else if path_buf.is_dir() {
-            let f = match fs::read_dir(path_buf) {
-                Ok(p) => p,
-                Err(_) => return Err(NemoError::new("Can't open dir")),
-            };
 
-            for file in f {
-                let dir = match file {
-                    Ok(p) => p.path(),
-                    Err(_) => return Err(NemoError::new("Coulnd't parse DirEntry")),
-                };
-                let fname = dir.as_path().to_str().unwrap();
-                if dir.is_file() && fname.contains(options.filter) {
-                    let nm = Rc::new(process_nemo_data(&dir).unwrap());
-                    vec_files.push(nm);
-                }
-            }
+        if path_buf.is_file() {
+            self.load_from_file(path_buf, &mut vec_files)?;
+        } else if path_buf.is_dir() {
+            self.load_from_dir(path_buf, &mut vec_files)?;
         }
 
         Ok(Self {
             files: vec_files,
-            paths: vec_paths,
-            options: NemoReaderOptions::default(),
+            options,
         })
+    }
+    fn load_contents(&self, path: &PathBuf) -> Result<String, NemoError> {
+        match fs::read_to_string(path) {
+            Ok(v) => Ok(v),
+            Err(_) => Err(NemoError::new("Couldn't open file")),
+        }
+    }
+    fn get_filename(&self, p: &Path) -> String {
+        let s = p.file_name().unwrap().to_string_lossy().into_owned();
+        s
+    }
+    fn load_from_file(&self, path_buf: PathBuf, vec_files: &mut Vec<Rc<NemoFile>>) -> Result<(), NemoError>{
+        if !path_buf.is_file() { return Err(NemoError::new("Tried to open file when it's not a file"))}
+        
+        let filename = self.get_filename(&path_buf);
+        let filter = self.options.filter.as_str();
+        if filename.contains(filter){
+            let contents = self.load_contents(&path_buf)?;
+            let file = Rc::new(
+                process_nemo_data(contents, filename)?);
+            vec_files.push(file);
+        }
+        Ok(())
+    }
+    fn load_from_dir(&self, path_buf: PathBuf, vec_files: &mut Vec<Rc<NemoFile>>) -> Result<(), NemoError> {
+        if !path_buf.is_dir() { return Err(NemoError::new("Tried to open file when it's not a file"))}
+
+        let read_dir = match path_buf.read_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(NemoError::new("Can't read directory"))
+        };
+        for file in read_dir {
+            let file = match file {
+                Ok(f) => f,
+                Err(_) => return Err(NemoError::new("Can't process DirEntry"))
+            };
+            self.load_from_file(file.path(), vec_files)?;
+        }
+        Ok(())
+    }
+    pub fn options(&mut self, options: &NemoReaderOptions) -> Self {
+        Self {
+            options: options.clone(),
+            files: self.files.clone(),
+        }
     }
     pub fn get_files(self) -> Vec<Rc<NemoFile>> {
         self.files
     }
 
 }
-
+impl NemoReaderOptions {
+    pub fn filter(self, filter: impl ToString) -> Self
+    {
+        let fil = filter.to_string();
+        Self {
+            filter: fil
+        }
+    }
+    
+}
 impl Display for NemoReaderOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", self.filter).unwrap();
+        writeln!(f, "Filter: {}", self.filter)?;
         Ok(())
     }
 }
 impl Display for NemoReader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Options: {}", self.options).unwrap();
+        writeln!(f, "Options: {}", self.options)?;
+        write!(f, "\nFiles: ")?;
+        for file in &self.files {
+            writeln!(f,"\t{}", file.filename)?;
+        }
         Ok(())
     }
 }
-/* pub struct CloneableReader(pub NemoReader);
-impl Deref for CloneableReader {
-    type Target = NemoReader;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl DerefMut for CloneableReader {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-impl Clone for CloneableReader {
-    fn clone(&self) -> Self {
-        CloneableReader(NemoReader {
-            options: self.options,
-            files: self.files.clone(),
-            paths: self.paths.clone(),
-        })
-    }
-}
-    */
-fn process_nemo_data(path: &PathBuf) -> Result<NemoFile, NemoError> {
+
+fn process_nemo_data(contents: String, filename: String) -> Result<NemoFile, NemoError> {
     let mut rdr = csv::ReaderBuilder::new()
         .flexible(true)
         .trim(csv::Trim::Fields)
-        .from_path(path)
-        .unwrap();
+        .from_reader(contents.as_bytes());
     // Instead of creating an iterator with the `records` method, we create
     // an iterator with the `deserialize` method.
     // let mut nemo_file = NemoFile::default();
     let mut vec_of_points: Vec<NemoPoint> = vec![];
-    // Sets filename
-    let filename = path.to_str().unwrap().to_string();
+
     for result in rdr.deserialize() {
         // We must tell Serde what type we want to deserialize into.
         let mut record: NemoPoint = match result {
@@ -136,5 +164,3 @@ fn process_nemo_data(path: &PathBuf) -> Result<NemoFile, NemoError> {
         ..Default::default()
     })
 }
-#[cfg(feature="survex")]
-fn to_survex(){}
