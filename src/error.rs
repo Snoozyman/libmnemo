@@ -8,6 +8,7 @@ pub enum NemoErrorKind {
     Date,
     NotFound,
     Permissions,
+    Undefined,
     #[default]
     Generic,
 }
@@ -46,7 +47,8 @@ impl From<String> for NemoErrorKind {
             "date" => NemoErrorKind::Date,
             "notfound" => NemoErrorKind::NotFound,
             "permsissions" => NemoErrorKind::Permissions,
-            "generic" | _ => NemoErrorKind::Generic
+            "generic" => NemoErrorKind::Generic,
+            _ => NemoErrorKind::Undefined,
         }
     }
 }
@@ -56,8 +58,9 @@ impl From<&str> for NemoErrorKind {
         NemoErrorKind::from(val)
     }
 }
-impl Into<String> for NemoErrorKind {
-    fn into(self) -> String {
+/*
+impl From<String> for NemoErrorKind {
+    fn from(self) -> String {
         let res = match self {
             NemoErrorKind::Io => "io",
             NemoErrorKind::Parse => "parse",
@@ -67,6 +70,7 @@ impl Into<String> for NemoErrorKind {
         res.into()
     }
 }
+*/
 impl Display for NemoErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let errtype = self.as_str();
